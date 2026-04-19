@@ -3,15 +3,20 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { VideoInfo } from '../models/video-info.model';
-import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root',
 })
 export class YoutubeService {
-  private apiUrl = environment.apiUrl;
+  private apiUrl: string;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) {
+    if (window.location.hostname === 'localhost') {
+      this.apiUrl = 'http://localhost:3000/api';
+    } else {
+      this.apiUrl = '/api';
+    }
+  }
 
   getVideoInfo(url: string): Observable<VideoInfo> {
     return this.http.post<VideoInfo>(`${this.apiUrl}/info`, { url });
