@@ -1,4 +1,3 @@
-// server.js
 const express = require('express');
 const cors = require('cors');
 const { exec } = require('child_process');
@@ -12,10 +11,8 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// ─── Servir le frontend Angular ───
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ─── Validation URL ───
 function isValidYoutubeUrl(url) {
   if (typeof url !== 'string' || url.length > 200) return false;
   const pattern = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)[\w-]{11}/;
@@ -37,14 +34,26 @@ function cleanupFile(filepath) {
 
 function execPromise(cmd, options = {}) {
   return new Promise((resolve, reject) => {
-    exec(cmd, { timeout: 60000, ...options }, (error, stdout, stderr) => {
+    exec(cmd, { timeout: 120000, ...options }, (error, stdout, stderr) => {
       if (error) reject({ error, stderr });
       else resolve({ stdout, stderr });
     });
   });
 }
 
-// ─── API ───
+// Trouver le chemin de Node.js pour yt-dlp
+const nodePath = process.execPath;
+console.log('📂 Node.js path:', nodePath);
+
+// Options yt-dlp
+const YT_DLP_OPTS = [
+  '--no-check-certificates',
+  `--js-runtimes nodejs:${nodePath}`,
+  '--user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"',
+  '--extractor-args "youtube:player_client=mweb"',
+  '--no-warnings',
+].join(' ');
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
@@ -60,7 +69,7 @@ app.post('/api/info', async (req, res) => {
     console.log('\n📥 [INFO]', safeUrl);
 
     const { stdout } = await execPromise(
-      `yt-dlp --dump-json --no-download --no-check-certificates "${safeUrl}"`,
+      `yt-dlp --dump-json --no-download ${YT_DLP_OPTS} "${safeUrl}"`,
       { timeout: 30000 }
     );
 
@@ -75,7 +84,6 @@ app.post('/api/info', async (req, res) => {
     });
     console.log('✅ [INFO]', info.title);
   } catch (err) {
-    // Log l'erreur COMPLÈTE
     console.error('❌ [INFO ERROR]', err.error?.message || err.message);
     console.error('❌ [INFO STDERR]', err.stderr || 'no stderr');
     res.status(500).json({ error: 'Impossible de récupérer les informations.' });
@@ -96,7 +104,7 @@ app.post('/api/download', async (req, res) => {
     console.log('\n📥 [DOWNLOAD]', safeUrl);
 
     await execPromise(
-      `yt-dlp -x --audio-format mp3 --audio-quality 192K --no-check-certificates -o "${tmpFile}.%(ext)s" "${safeUrl}"`,
+      `yt-dlp -x --audio-format mp3 --audio-quality 192K ${YT_DLP_OPTS} -o "${tmpFile}.%(ext)s" "${safeUrl}"`,
       { timeout: 120000 }
     );
 
@@ -107,7 +115,10 @@ app.post('/api/download', async (req, res) => {
 
     let safeTitle = 'audio';
     try {
-      const { stdout } = await execPromise(`yt-dlp --get-title --no-check-certificates "${safeUrl}"`, { timeout: 10000 });
+      const { stdout } = await execPromise(
+        `yt-dlp --get-title ${YT_DLP_OPTS} "${safeUrl}"`,
+        { timeout: 10000 }
+      );
       safeTitle = stdout.trim().replace(/[^\w\s-]/gi, '').trim() || 'audio';
     } catch {}
 
@@ -131,7 +142,6 @@ app.post('/api/download', async (req, res) => {
   }
 });
 
-// ─── Toutes les autres routes → Angular ───
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });

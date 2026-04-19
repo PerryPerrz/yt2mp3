@@ -9,17 +9,15 @@ RUN apt-get update && apt-get install -y \
     && chmod a+rx /usr/local/bin/yt-dlp \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# Node.js est déjà installé (image node:20)
+# On crée un lien pour que yt-dlp le trouve
+RUN ln -sf /usr/local/bin/node /usr/bin/nodejs
+
 WORKDIR /app
 
-# Copier TOUT
 COPY . .
 
-# Installer dépendances
 RUN npm install --production
-
-# Debug : vérifier les fichiers
-RUN echo "=== /app ===" && ls -la /app
-RUN echo "=== /app/public ===" && ls -la /app/public || echo "PUBLIC MANQUANT!"
 
 EXPOSE 3000
 
