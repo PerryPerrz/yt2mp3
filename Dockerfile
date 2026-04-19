@@ -11,15 +11,15 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# Copier TOUT le projet
+# Copier TOUT
 COPY . .
 
-# Installer les dépendances
+# Installer dépendances
 RUN npm install --production
 
-# Vérifier que public/ existe (debug)
-RUN echo "=== Contenu de /app ===" && ls -la /app
-RUN echo "=== Contenu de /app/public ===" && ls -la /app/public
+# Debug : vérifier les fichiers
+RUN echo "=== /app ===" && ls -la /app
+RUN echo "=== /app/public ===" && ls -la /app/public || echo "PUBLIC MANQUANT!"
 
 EXPOSE 3000
 
