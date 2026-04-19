@@ -11,13 +11,16 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-COPY package*.json ./
+# Copier TOUT le projet
+COPY . .
+
+# Installer les dépendances
 RUN npm install --production
 
-COPY server.js ./
-COPY public/ ./public/
+# Vérifier que public/ existe (debug)
+RUN echo "=== Contenu de /app ===" && ls -la /app
+RUN echo "=== Contenu de /app/public ===" && ls -la /app/public
 
 EXPOSE 3000
 
 CMD ["node", "server.js"]
-
