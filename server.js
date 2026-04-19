@@ -10,7 +10,6 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-
 app.use(express.static(path.join(__dirname, 'public')));
 
 function isValidYoutubeUrl(url) {
@@ -41,21 +40,26 @@ function execPromise(cmd, options = {}) {
   });
 }
 
-// Trouver le chemin de Node.js pour yt-dlp
-const nodePath = process.execPath;
-console.log('📂 Node.js path:', nodePath);
+// Vérifier si un fichier cookies existe
+const cookiesPath = path.join(__dirname, 'cookies.txt');
+const hasCookies = fs.existsSync(cookiesPath);
+console.log(hasCookies ? '🍪 Cookies YouTube trouvés' : '⚠️ Pas de cookies (risque de blocage)');
 
 // Options yt-dlp
-const YT_DLP_OPTS = [
-  '--no-check-certificates',
-  `--js-runtimes nodejs:${nodePath}`,
-  '--user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"',
-  '--extractor-args "youtube:player_client=mweb"',
-  '--no-warnings',
-].join(' ');
+function getYtDlpOpts() {
+  const opts = [
+    '--no-check-certificates',
+    '--user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"',
+    '--extractor-args "youtube:player_client=mweb"',
+  ];
+  if (hasCookies) {
+    opts.push(`--cookies "${cookiesPath}"`);
+  }
+  return opts.join(' ');
+}
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok' });
+  res.json({ status: 'ok', cookies: hasCookies });
 });
 
 app.post('/api/info', async (req, res) => {
@@ -69,7 +73,7 @@ app.post('/api/info', async (req, res) => {
     console.log('\n📥 [INFO]', safeUrl);
 
     const { stdout } = await execPromise(
-      `yt-dlp --dump-json --no-download ${YT_DLP_OPTS} "${safeUrl}"`,
+      `yt-dlp --dump-json --no-download ${getYtDlpOpts()} "${safeUrl}"`,
       { timeout: 30000 }
     );
 
@@ -85,7 +89,7 @@ app.post('/api/info', async (req, res) => {
     console.log('✅ [INFO]', info.title);
   } catch (err) {
     console.error('❌ [INFO ERROR]', err.error?.message || err.message);
-    console.error('❌ [INFO STDERR]', err.stderr || 'no stderr');
+    console.error('❌ [INFO STDERR]', err.stderr || '');
     res.status(500).json({ error: 'Impossible de récupérer les informations.' });
   }
 });
@@ -104,7 +108,7 @@ app.post('/api/download', async (req, res) => {
     console.log('\n📥 [DOWNLOAD]', safeUrl);
 
     await execPromise(
-      `yt-dlp -x --audio-format mp3 --audio-quality 192K ${YT_DLP_OPTS} -o "${tmpFile}.%(ext)s" "${safeUrl}"`,
+      `yt-dlp -x --audio-format mp3 --audio-quality 192K ${getYtDlpOpts()} -o "${tmpFile}.%(ext)s" "${safeUrl}"`,
       { timeout: 120000 }
     );
 
@@ -116,7 +120,7 @@ app.post('/api/download', async (req, res) => {
     let safeTitle = 'audio';
     try {
       const { stdout } = await execPromise(
-        `yt-dlp --get-title ${YT_DLP_OPTS} "${safeUrl}"`,
+        `yt-dlp --get-title ${getYtDlpOpts()} "${safeUrl}"`,
         { timeout: 10000 }
       );
       safeTitle = stdout.trim().replace(/[^\w\s-]/gi, '').trim() || 'audio';
@@ -134,7 +138,7 @@ app.post('/api/download', async (req, res) => {
 
   } catch (err) {
     console.error('❌ [DOWNLOAD ERROR]', err.error?.message || err.message);
-    console.error('❌ [DOWNLOAD STDERR]', err.stderr || 'no stderr');
+    console.error('❌ [DOWNLOAD STDERR]', err.stderr || '');
     cleanupFile(outputFile);
     if (!res.headersSent) {
       res.status(500).json({ error: 'Erreur lors de la conversion.' });
