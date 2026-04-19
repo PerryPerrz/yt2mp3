@@ -60,7 +60,7 @@ app.post('/api/info', async (req, res) => {
     console.log('\n📥 [INFO]', safeUrl);
 
     const { stdout } = await execPromise(
-      `yt-dlp --dump-json --no-download "${safeUrl}"`,
+      `yt-dlp --dump-json --no-download --no-check-certificates "${safeUrl}"`,
       { timeout: 30000 }
     );
 
@@ -75,7 +75,9 @@ app.post('/api/info', async (req, res) => {
     });
     console.log('✅ [INFO]', info.title);
   } catch (err) {
-    console.error('❌ [INFO]', err.error?.message || err.message);
+    // Log l'erreur COMPLÈTE
+    console.error('❌ [INFO ERROR]', err.error?.message || err.message);
+    console.error('❌ [INFO STDERR]', err.stderr || 'no stderr');
     res.status(500).json({ error: 'Impossible de récupérer les informations.' });
   }
 });
@@ -94,7 +96,7 @@ app.post('/api/download', async (req, res) => {
     console.log('\n📥 [DOWNLOAD]', safeUrl);
 
     await execPromise(
-      `yt-dlp -x --audio-format mp3 --audio-quality 192K -o "${tmpFile}.%(ext)s" "${safeUrl}"`,
+      `yt-dlp -x --audio-format mp3 --audio-quality 192K --no-check-certificates -o "${tmpFile}.%(ext)s" "${safeUrl}"`,
       { timeout: 120000 }
     );
 
@@ -105,7 +107,7 @@ app.post('/api/download', async (req, res) => {
 
     let safeTitle = 'audio';
     try {
-      const { stdout } = await execPromise(`yt-dlp --get-title "${safeUrl}"`, { timeout: 10000 });
+      const { stdout } = await execPromise(`yt-dlp --get-title --no-check-certificates "${safeUrl}"`, { timeout: 10000 });
       safeTitle = stdout.trim().replace(/[^\w\s-]/gi, '').trim() || 'audio';
     } catch {}
 
@@ -120,7 +122,8 @@ app.post('/api/download', async (req, res) => {
     req.on('close', () => { fileStream.destroy(); cleanupFile(outputFile); });
 
   } catch (err) {
-    console.error('❌ [DOWNLOAD]', err.error?.message || err.message);
+    console.error('❌ [DOWNLOAD ERROR]', err.error?.message || err.message);
+    console.error('❌ [DOWNLOAD STDERR]', err.stderr || 'no stderr');
     cleanupFile(outputFile);
     if (!res.headersSent) {
       res.status(500).json({ error: 'Erreur lors de la conversion.' });
