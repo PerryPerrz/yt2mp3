@@ -1,8 +1,9 @@
 const express = require('express');
 const cors = require('cors');
-const { execFile, spawn } = require('child_process');
+const { execFile } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -24,9 +25,15 @@ function sanitizeUrl(url) {
   return url;
 }
 
+function cleanupFile(filepath) {
+  try {
+    if (fs.existsSync(filepath)) fs.unlinkSync(filepath);
+  } catch {}
+}
+
 function runYtDlp(args) {
   return new Promise((resolve, reject) => {
-    execFile('yt-dlp', args, { timeout: 30000 }, (error, stdout, stderr) => {
+    execFile('yt-dlp', args, { timeout: 120000 }, (error, stdout, stderr) => {
       if (error) reject({ error, stderr, stdout });
       else resolve({ stdout, stderr });
     });
@@ -50,14 +57,12 @@ function baseArgs() {
   return args;
 }
 
-// ─── Cache des infos vidéo (évite de refaire le call) ───
 const infoCache = new Map();
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', cookies: hasCookies });
 });
 
-// ─── INFO : inchangé ───
 app.post('/api/info', async (req, res) => {
   try {
     const { url } = req.body;
@@ -81,19 +86,20 @@ app.post('/api/info', async (req, res) => {
       viewCount: String(info.view_count || 0),
     };
 
-    // Mettre en cache le titre
     infoCache.set(safeUrl, result.title);
-
     res.json(result);
     console.log('✅ [INFO]', info.title);
   } catch (err) {
     console.error('❌ [INFO ERROR]', err.error?.message || err.message);
+    console.error('❌ [STDERR]', err.stderr || 'empty');
     res.status(500).json({ error: 'Impossible de récupérer les informations.' });
   }
 });
 
-// ─── DOWNLOAD : version STREAMING ───
 app.post('/api/download', async (req, res) => {
+  const tmpFile = path.join(os.tmpdir(), `yt-mp3-${Date.now()}`);
+  const outputFile = `${tmpFile}.mp3`;
+
   try {
     const { url } = req.body;
     if (!url || !isValidYoutubeUrl(url)) {
@@ -101,9 +107,23 @@ app.post('/api/download', async (req, res) => {
     }
 
     const safeUrl = sanitizeUrl(url);
-    console.log('\n📥 [DOWNLOAD STREAM]', safeUrl);
+    console.log('\n📥 [DOWNLOAD]', safeUrl);
 
-    // Récupérer le titre depuis le cache (évite un 2ème appel)
+    const dlArgs = [
+      '-x', '--audio-format', 'mp3',
+      '--audio-quality', '192K',
+      ...baseArgs(),
+      '-o', `${tmpFile}.%(ext)s`,
+      safeUrl,
+    ];
+
+    await runYtDlp(dlArgs);
+
+    if (!fs.existsSync(outputFile)) throw new Error('MP3 non généré');
+
+    const stats = fs.statSync(outputFile);
+    console.log(`✅ MP3: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
+
     const cachedTitle = infoCache.get(safeUrl);
     const safeTitle = cachedTitle
       ? cachedTitle.replace(/[^\w\s-]/gi, '').trim()
@@ -111,83 +131,20 @@ app.post('/api/download', async (req, res) => {
 
     res.setHeader('Content-Disposition', `attachment; filename="${safeTitle}.mp3"`);
     res.setHeader('Content-Type', 'audio/mpeg');
-    res.setHeader('Transfer-Encoding', 'chunked');
+    res.setHeader('Content-Length', stats.size);
 
-    // yt-dlp télécharge l'audio et écrit sur stdout
-    const ytdlp = spawn('yt-dlp', [
-      '-f', 'bestaudio',
-      '-o', '-',
-      ...baseArgs(),
-      safeUrl,
-    ]);
-
-    // ffmpeg convertit le stream en MP3 et écrit sur stdout
-    const ffmpeg = spawn('ffmpeg', [
-      '-i', 'pipe:0',
-      '-vn',
-      '-ab', '192k',
-      '-f', 'mp3',
-      '-loglevel', 'error',
-      'pipe:1',
-    ]);
-
-    // Pipeline : yt-dlp stdout → ffmpeg stdin → ffmpeg stdout → response
-    ytdlp.stdout.pipe(ffmpeg.stdin);
-    ffmpeg.stdout.pipe(res);
-
-    // Logs
-    ytdlp.stderr.on('data', (data) => {
-      const msg = data.toString().trim();
-      if (msg && !msg.startsWith('WARNING')) {
-        console.log('[YT-DLP]', msg);
-      }
-    });
-
-    ffmpeg.stderr.on('data', (data) => {
-      const msg = data.toString().trim();
-      if (msg) console.error('[FFMPEG]', msg);
-    });
-
-    // Gestion erreurs
-    ytdlp.on('error', (err) => {
-      console.error('❌ [YT-DLP]', err.message);
-      if (!res.headersSent) {
-        res.status(500).json({ error: 'Erreur yt-dlp.' });
-      }
-    });
-
-    ffmpeg.on('error', (err) => {
-      console.error('❌ [FFMPEG]', err.message);
-      if (!res.headersSent) {
-        res.status(500).json({ error: 'Erreur ffmpeg.' });
-      }
-    });
-
-    ytdlp.on('close', (code) => {
-      if (code !== 0) {
-        console.error(`❌ yt-dlp exited with code ${code}`);
-        ffmpeg.stdin.end();
-      }
-    });
-
-    ffmpeg.on('close', (code) => {
-      if (code === 0) {
-        console.log(`✅ Stream terminé : ${safeTitle}`);
-      } else {
-        console.error(`❌ ffmpeg exited with code ${code}`);
-      }
-    });
-
-    // Cleanup si le client coupe
-    req.on('close', () => {
-      ytdlp.kill();
-      ffmpeg.kill();
-    });
+    const fileStream = fs.createReadStream(outputFile);
+    fileStream.pipe(res);
+    fileStream.on('end', () => cleanupFile(outputFile));
+    fileStream.on('error', () => cleanupFile(outputFile));
+    req.on('close', () => { fileStream.destroy(); cleanupFile(outputFile); });
 
   } catch (err) {
-    console.error('❌ [DOWNLOAD ERROR]', err.message);
+    console.error('❌ [DOWNLOAD ERROR]', err.error?.message || err.message);
+    console.error('❌ [STDERR]', err.stderr || 'empty');
+    cleanupFile(outputFile);
     if (!res.headersSent) {
-      res.status(500).json({ error: 'Erreur lors du téléchargement.' });
+      res.status(500).json({ error: 'Erreur lors de la conversion.' });
     }
   }
 });
