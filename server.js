@@ -40,17 +40,17 @@ function execPromise(cmd, options = {}) {
   });
 }
 
-// Vérifier si un fichier cookies existe
+// Cookies
 const cookiesPath = path.join(__dirname, 'cookies.txt');
 const hasCookies = fs.existsSync(cookiesPath);
-console.log(hasCookies ? '🍪 Cookies YouTube trouvés' : '⚠️ Pas de cookies (risque de blocage)');
+console.log(hasCookies ? '🍪 Cookies trouvés' : '⚠️ Pas de cookies');
 
 // Options yt-dlp
 function getYtDlpOpts() {
   const opts = [
     '--no-check-certificates',
+    '--extractor-args "youtube:player_client=web"',
     '--user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"',
-    '--extractor-args "youtube:player_client=mweb"',
   ];
   if (hasCookies) {
     opts.push(`--cookies "${cookiesPath}"`);
@@ -72,10 +72,10 @@ app.post('/api/info', async (req, res) => {
     const safeUrl = sanitizeUrl(url);
     console.log('\n📥 [INFO]', safeUrl);
 
-    const { stdout } = await execPromise(
-      `yt-dlp --dump-json --no-download ${getYtDlpOpts()} "${safeUrl}"`,
-      { timeout: 30000 }
-    );
+    const cmd = `yt-dlp --dump-json --no-download ${getYtDlpOpts()} "${safeUrl}"`;
+    console.log('🔄 CMD:', cmd);
+
+    const { stdout } = await execPromise(cmd, { timeout: 30000 });
 
     const info = JSON.parse(stdout);
     res.json({
@@ -89,7 +89,7 @@ app.post('/api/info', async (req, res) => {
     console.log('✅ [INFO]', info.title);
   } catch (err) {
     console.error('❌ [INFO ERROR]', err.error?.message || err.message);
-    console.error('❌ [INFO STDERR]', err.stderr || '');
+    console.error('❌ [STDERR]', err.stderr || '');
     res.status(500).json({ error: 'Impossible de récupérer les informations.' });
   }
 });
@@ -138,7 +138,7 @@ app.post('/api/download', async (req, res) => {
 
   } catch (err) {
     console.error('❌ [DOWNLOAD ERROR]', err.error?.message || err.message);
-    console.error('❌ [DOWNLOAD STDERR]', err.stderr || '');
+    console.error('❌ [STDERR]', err.stderr || '');
     cleanupFile(outputFile);
     if (!res.headersSent) {
       res.status(500).json({ error: 'Erreur lors de la conversion.' });
