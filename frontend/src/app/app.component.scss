@@ -1,0 +1,422 @@
+// ─── Variables ───
+$bg-gradient-1: #0f0c29;
+$bg-gradient-2: #302b63;
+$bg-gradient-3: #24243e;
+$accent: #ff6b6b;
+$accent-dark: #ee5a24;
+$success: #00b894;
+$success-light: #55efc4;
+$error: #ff6b6b;
+$info: #a29bfe;
+$white: #ffffff;
+$glass-bg: rgba(255, 255, 255, 0.05);
+$glass-border: rgba(255, 255, 255, 0.1);
+$text-muted: rgba(255, 255, 255, 0.4);
+$radius-lg: 24px;
+$radius-md: 14px;
+$radius-sm: 10px;
+
+// ─── Animations ───
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0%, 100% { background-position: 0% center; }
+  50% { background-position: 200% center; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+// ─── Page ───
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, $bg-gradient-1, $bg-gradient-2, $bg-gradient-3);
+  padding: 24px;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  color: $white;
+}
+
+// ─── Container ───
+.container {
+  background: $glass-bg;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid $glass-border;
+  border-radius: $radius-lg;
+  padding: 48px 40px;
+  width: 100%;
+  max-width: 600px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+  animation: fadeInUp 0.6s ease;
+
+  @media (max-width: 480px) {
+    padding: 32px 20px;
+    border-radius: 16px;
+  }
+}
+
+// ─── Header ───
+.header {
+  text-align: center;
+  margin-bottom: 36px;
+
+  .logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 8px;
+
+    .logo-icon {
+      font-size: 42px;
+      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 800;
+      background: linear-gradient(90deg, $accent, #ffa500, $accent);
+      background-size: 200%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shimmer 3s ease-in-out infinite;
+
+      .arrow {
+        font-weight: 400;
+      }
+    }
+  }
+
+  .subtitle {
+    color: $text-muted;
+    font-size: 14px;
+  }
+}
+
+// ─── Input Section ───
+.input-section {
+  margin-bottom: 24px;
+}
+
+.input-wrapper {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.07);
+  border: 2px solid $glass-border;
+  border-radius: $radius-md;
+  padding: 4px;
+  transition: border-color 0.3s, box-shadow 0.3s;
+  margin-bottom: 16px;
+
+  &:focus-within {
+    border-color: $accent;
+    box-shadow: 0 0 0 4px rgba($accent, 0.15);
+  }
+
+  .input-icon {
+    padding: 0 12px;
+    font-size: 18px;
+    opacity: 0.5;
+  }
+
+  input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: $white;
+    font-size: 15px;
+    padding: 12px 8px;
+    min-width: 0;
+
+    &::placeholder {
+      color: rgba(255, 255, 255, 0.25);
+    }
+
+    &.valid {
+      color: $success-light;
+    }
+
+    &.invalid {
+      color: $error;
+    }
+  }
+
+  .btn-paste {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: $radius-sm;
+    padding: 8px 12px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin: 4px;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+  }
+}
+
+// ─── Actions ───
+.actions {
+  display: flex;
+  gap: 12px;
+}
+
+// ─── Buttons ───
+.btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: $radius-md;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none !important;
+  }
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, $accent, $accent-dark);
+  color: $white;
+  box-shadow: 0 4px 20px rgba($accent, 0.4);
+  flex: 1;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 30px rgba($accent, 0.6);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+}
+
+.btn-ghost {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: $white;
+  }
+}
+
+.btn-download {
+  width: 100%;
+  padding: 16px 24px;
+  margin-top: 20px;
+  font-size: 16px;
+  background: linear-gradient(135deg, $success, #00cec9);
+  color: $white;
+  box-shadow: 0 4px 20px rgba($success, 0.4);
+  border-radius: $radius-md;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba($success, 0.5);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+}
+
+// ─── Status Bar ───
+.status-bar {
+  margin-bottom: 20px;
+  animation: fadeInUp 0.3s ease;
+}
+
+.status {
+  padding: 14px 18px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &.loading {
+    background: rgba(108, 92, 231, 0.12);
+    color: $info;
+    border: 1px solid rgba(108, 92, 231, 0.2);
+  }
+
+  &.error {
+    background: rgba($error, 0.12);
+    color: $error;
+    border: 1px solid rgba($error, 0.2);
+  }
+
+  &.success {
+    background: rgba($success, 0.12);
+    color: $success-light;
+    border: 1px solid rgba($success, 0.2);
+  }
+}
+
+// ─── Spinner ───
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+.spinner-white {
+  border-color: rgba(255, 255, 255, 0.3);
+  border-top-color: $white;
+}
+
+// ─── Preview Card ───
+.preview-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  overflow: hidden;
+  animation: fadeInUp 0.5s ease;
+}
+
+.preview-thumbnail {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.3);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+  }
+
+  &:hover img {
+    transform: scale(1.03);
+  }
+
+  .duration-badge {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.8);
+    color: $white;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+}
+
+.preview-details {
+  padding: 20px;
+
+  .preview-title {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.5;
+    margin-bottom: 12px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+        // ... suite de .preview-details
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .preview-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+
+    .meta-item {
+      font-size: 13px;
+      color: $text-muted;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+  }
+}
+
+// Le bouton download est déjà dans .preview-card via le template
+.preview-card .btn-download {
+  margin: 0 20px 20px 20px;
+  width: calc(100% - 40px);
+}
+
+// ─── Footer ───
+.footer {
+  text-align: center;
+  margin-top: 28px;
+
+  p {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.2);
+    letter-spacing: 0.3px;
+  }
+}
+
+// ─── Responsive ───
+@media (max-width: 480px) {
+  .header .logo h1 {
+    font-size: 22px;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .btn-primary {
+    width: 100%;
+  }
+
+  .preview-details {
+    padding: 16px;
+  }
+
+  .preview-meta {
+    flex-direction: column;
+    gap: 8px !important;
+  }
+
+  .preview-card .btn-download {
+    margin: 0 16px 16px 16px;
+    width: calc(100% - 32px);
+  }
+}
+

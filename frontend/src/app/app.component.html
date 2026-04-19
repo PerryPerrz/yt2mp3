@@ -1,0 +1,89 @@
+<div class="page">
+  <div class="container">
+
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <span class="logo-icon">🎵</span>
+        <h1>YouTube <span class="arrow">→</span> MP3</h1>
+      </div>
+      <p class="subtitle">Collez un lien YouTube et téléchargez l'audio en MP3</p>
+    </header>
+
+    <!-- Input -->
+    <div class="input-section">
+      <div class="input-wrapper">
+        <span class="input-icon">🔗</span>
+        <input
+          type="text"
+          [(ngModel)]="url"
+          (keydown)="onKeydown($event)"
+          placeholder="https://www.youtube.com/watch?v=..."
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button class="btn-paste" (click)="pasteFromClipboard()">📋</button>
+      </div>
+
+      <div class="actions">
+        <button
+          class="btn btn-primary"
+          (click)="fetchInfo()"
+          [disabled]="!isValidUrl || status === 'fetching'">
+          <span *ngIf="status !== 'fetching'">🔍 Analyser</span>
+          <span *ngIf="status === 'fetching'"><span class="spinner"></span> Analyse…</span>
+        </button>
+
+        <button *ngIf="status !== 'idle'" class="btn btn-ghost" (click)="reset()">
+          ↺ Reset
+        </button>
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div *ngIf="status === 'error'" class="status error">
+      ❌ {{ errorMessage }}
+    </div>
+
+    <!-- Downloading -->
+    <div *ngIf="status === 'downloading'" class="status loading">
+      <span class="spinner"></span> Conversion en cours… Veuillez patienter.
+    </div>
+
+    <!-- Done -->
+    <div *ngIf="status === 'done'" class="status success">
+      ✅ Téléchargement terminé !
+    </div>
+
+    <!-- Preview -->
+    <div *ngIf="videoInfo" class="preview-card">
+      <div class="preview-thumbnail">
+        <img [src]="videoInfo.thumbnail" [alt]="videoInfo.title" />
+        <span class="duration-badge">{{ formattedDuration }}</span>
+      </div>
+
+      <div class="preview-details">
+        <h3 class="preview-title">{{ videoInfo.title }}</h3>
+        <div class="preview-meta">
+          <span>🎤 {{ videoInfo.author }}</span>
+          <span *ngIf="formattedViews">👁️ {{ formattedViews }} vues</span>
+          <span>⏱️ {{ formattedDuration }}</span>
+        </div>
+      </div>
+
+      <button
+        class="btn btn-download"
+        (click)="downloadMp3()"
+        [disabled]="status === 'downloading'">
+        <span *ngIf="status !== 'downloading'">⬇️ Télécharger en MP3</span>
+        <span *ngIf="status === 'downloading'"><span class="spinner"></span> Conversion…</span>
+      </button>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>⚠️ Usage personnel uniquement — Respectez les droits d'auteur</p>
+    </footer>
+
+  </div>
+</div>
